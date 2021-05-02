@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Heading, Button, Text, Grid, Box, TextInput, DropButton } from 'grommet';
 import { withTranslation } from 'react-i18next';
-import { Configure, Bug } from 'grommet-icons';
+import { Configure } from 'grommet-icons';
 
 import { MAX_VALUE, NODES } from './components/Constants';
 
@@ -34,20 +34,22 @@ type SummaryType = { [key: string]: { [key: string]: number | undefined | { [key
 export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageSize: string; t: any; i18n: any }) => {
   const [initialNodes, setInitialNodes] = useState<NodeType[]>([]);
   const [nodes, setNodes] = useState(initialNodes);
-  const [showAllTooltip, setShowAllTooltip] = useState(false);
+  // const [showAllTooltip, setShowAllTooltip] = useState(false);
+  const [showAllTooltip] = useState(false);
   const [totalPoints, setTotalPoints] = useState(0);
   const [summary, setSummary] = useState({} as SummaryType);
   const [searchString, setsearchString] = useState('');
   const [imporBuildString, setImportBuildString] = useState('');
   const [level, setLevel] = useState<number>();
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [reportBug, setReportBug] = useState(false);
-  const [showCredit, setShowCredit] = useState(false);
   const [currentX, setCurrentX] = useState(-1200);
+  const [currentZoom, setCurrentZoom] = useState(1);
   // const [isMouseHold, setIsMouseHold] = useState(false);
 
-  const isSmallPage = pageSize === 'small';
   const isChinese = i18n.language === 'cn';
+
+  useEffect(() => {
+    setCurrentZoom(pageSize === 'small' ? 1 : 0.6);
+  }, [pageSize]);
 
   useEffect(() => {
     const nodes = NODES.map(NODE => {
@@ -77,6 +79,7 @@ export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageS
       importBuild(buildString, nodes);
       window.history.pushState('some state', 'some title', pathParts[0]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // useEffect(() => {
@@ -175,7 +178,7 @@ export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageS
   };
 
   const statusPanel = (
-    <Box gridArea="stats" pad={'10px'}>
+    <Box pad={'10px'}>
       <Grid
         fill="horizontal"
         rows={['xxsmall', 'xxsmall', 'xxsmall', 'xxsmall']}
@@ -342,7 +345,13 @@ export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageS
 
   const moveStarMap = (isLeft: boolean) => {
     if ((isLeft && currentX < 100) || (!isLeft && currentX > -2500)) {
-      setCurrentX(currentX + 200 * (isLeft ? 1 : -1));
+      setCurrentX(currentX + 200 * currentZoom * (isLeft ? 1 : -1));
+    }
+  };
+
+  const zoomStarMap = (isZoomIn: boolean) => {
+    if ((isZoomIn && currentZoom < 2) || (!isZoomIn && currentZoom > 0.4)) {
+      setCurrentZoom(currentZoom + (isZoomIn ? 0.1 : -0.1));
     }
   };
 
@@ -353,38 +362,32 @@ export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageS
           {t('title')}
         </Heading>
         <Box direction="row">
-          <Button label={t('language')} plain={true} onClick={() => i18n.changeLanguage(isChinese ? 'en' : 'cn')} />
           <DropButton
-            icon={<Bug />}
-            open={reportBug}
-            onOpen={() => setReportBug(true)}
-            onClose={() => setReportBug(false)}
+            icon={<Configure />}
+            dropContent={statusPanel}
+            dropProps={{ align: { top: 'bottom', right: 'right' } }}
+          />
+          <Button label={t('language')} onClick={() => i18n.changeLanguage(isChinese ? 'en' : 'cn')} />
+          <DropButton
+            label={t('askForUpdate')}
             dropContent={
-              <Button
-                label={t('bugReport', { repoProvider })}
-                onClick={() =>
-                  window.open(`https://${repoProvider}.com/mintyknight/immortal-reborn-simulators/issues`, '_blank')
-                }
-              />
+              <>
+                <Button
+                  label={t('forum')}
+                  onClick={() => window.open(`https://www.taptap.com/topic/15451647`, '_blank')}
+                />
+                <Button
+                  label={t('bugReport', { repoProvider })}
+                  onClick={() =>
+                    window.open(`https://${repoProvider}.com/mintyknight/immortal-reborn-simulators/issues`, '_blank')
+                  }
+                />
+              </>
             }
             dropProps={{ align: { top: 'bottom', right: 'right' } }}
           />
-          {isSmallPage && (
-            <DropButton
-              icon={<Configure />}
-              open={showSidebar}
-              onOpen={() => setShowSidebar(true)}
-              onClose={() => setShowSidebar(false)}
-              dropContent={statusPanel}
-              dropProps={{ align: { top: 'bottom', right: 'right' } }}
-            />
-          )}
           <DropButton
             label={t('credit')}
-            plain={true}
-            open={showCredit}
-            onOpen={() => setShowCredit(true)}
-            onClose={() => setShowCredit(false)}
             dropContent={
               <>
                 {credits.map(credit => (
@@ -400,32 +403,26 @@ export const TalentSimulator = withTranslation()(({ pageSize, t, i18n }: { pageS
         <Grid
           fill={true}
           rows={['200%']}
-          columns={isSmallPage ? ['100%'] : ['50%', '50%']}
+          columns={['99%']}
           gap="small"
-          areas={
-            isSmallPage
-              ? [{ name: 'starMap', start: [0, 0], end: [0, 0] }]
-              : [
-                  { name: 'stats', start: [0, 0], end: [0, 0] },
-                  { name: 'starMap', start: [1, 0], end: [1, 0] },
-                ]
-          }>
-          {!isSmallPage && statusPanel}
-
+          areas={[{ name: 'starMap', start: [0, 0], end: [0, 0] }]}>
           <Box gridArea="starMap" background="light-2">
             <Grid
               rows={['100%']}
-              columns={['50%', '50%']}
-              gap="small"
+              columns={['22%', '4%', '22%', '4%', '22%', '4%', '22%']}
               areas={[
                 { name: 'left', start: [0, 0], end: [0, 0] },
-                { name: 'right', start: [1, 0], end: [1, 0] },
+                { name: 'midLeft', start: [2, 0], end: [2, 0] },
+                { name: 'midRight', start: [4, 0], end: [4, 0] },
+                { name: 'right', start: [6, 0], end: [6, 0] },
               ]}>
               <Button gridArea="left" primary label="<" onClick={() => moveStarMap(true)} />
               <Button gridArea="right" primary label=">" onClick={() => moveStarMap(false)} />
+              <Button gridArea="midLeft" primary label="+" onClick={() => zoomStarMap(true)} />
+              <Button gridArea="midRight" primary label="-" onClick={() => zoomStarMap(false)} />
             </Grid>
-            <svg width={'100%'} viewBox={'0 0 500 700'}>
-              <rect x={0} y={0} width="100%" height="100%" fill="Cyan" />
+            <svg width={'100%'} viewBox={`0 0 ${500 / currentZoom} ${700 * (currentZoom > 1 ? 1 : currentZoom)}`}>
+              <rect x={0} y={0} width="100%" height="100%" fill="Gray" />
               <svg x={currentX} width={'3000'} viewBox={size.viewBox}>
                 {nodes.map(node => (
                   <Node
